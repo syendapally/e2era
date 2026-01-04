@@ -11,7 +11,8 @@ set -euo pipefail
 # - Plaintext .env style (KEY=VALUE per line), which is written as-is
 # - JSON object, which will be rendered to KEY=VALUE lines
 
-: "${AWS_REGION:?AWS_REGION is required}"
+AWS_REGION="${AWS_REGION:-us-east-1}"
+: "${AWS_REGION:?AWS_REGION is required (defaulted to us-east-1 if unset)}"
 : "${AWS_SECRET_ID:?AWS_SECRET_ID is required}"
 
 secret_raw=$(aws secretsmanager get-secret-value \
@@ -33,5 +34,21 @@ else
   printf "%s\n" "$secret_raw" > .env
 fi
 
+python3 - <<'PYCODE' > .env.exports
+from pathlib import Path
+
+lines = []
+for raw in Path(".env").read_text().splitlines():
+    stripped = raw.strip()
+    if not stripped or stripped.startswith("#") or "=" not in stripped:
+        continue
+    key, value = stripped.split("=", 1)
+    lines.append(f'export {key}="{value}"')
+
+Path(".env.exports").write_text("\n".join(lines) + ("\n" if lines else ""))
+PYCODE
+
 echo ".env updated from Secrets Manager"
+echo ".env.exports generated (source it to export env vars):"
+echo "  source .env.exports"
 
