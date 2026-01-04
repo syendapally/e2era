@@ -57,3 +57,42 @@ Auto-start on reboot: add a simple systemd unit that runs `scripts/fetch_secrets
 ### Health endpoints
 - Nginx: `/healthz`
 - Backend: `/api/health/`
+
+### Auth (session-based)
+- `POST /api/auth/login/` (username/password form fields) sets a session cookie.
+- `POST /api/auth/logout/` clears the session.
+- `GET /api/auth/me/` returns the current user if authenticated.
+
+### Database
+- Defaults to SQLite if `DB_HOST` is unset.
+- For RDS/Aurora Postgres: set `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_SSL_MODE=require` in the secret/.env. Run:
+  ```
+  docker compose run --rm backend python manage.py migrate
+  docker compose run --rm backend python manage.py createsuperuser
+  ```
+
+### RDS/Aurora setup (Postgres)
+1) In AWS console, create an Aurora Postgres (or RDS Postgres) instance/cluster in the same VPC as your EC2. Disable public access; use a Security Group that allows inbound 5432 from the EC2 instance’s SG.  
+2) Note the endpoint, DB name, username, password.  
+3) Update your existing Secrets Manager entry with:
+   - `DB_HOST=<cluster-endpoint>`
+   - `DB_PORT=5432`
+   - `DB_NAME=<your-db-name>`
+   - `DB_USER=<your-db-user>`
+   - `DB_PASSWORD=<your-db-password>`
+   - `DB_SSL_MODE=require`
+   (Keep existing Django vars and secret key.)  
+4) On EC2: `./scripts/fetch_secrets.sh`, then:
+   ```
+   docker compose build
+   docker compose up -d
+   docker compose run --rm backend python manage.py migrate
+   docker compose run --rm backend python manage.py createsuperuser
+   ```
+5) Test:
+   ```
+   curl -I http://localhost/healthz
+   curl -I http://localhost/api/health/
+   curl -i http://localhost/api/auth/login/ -d "username=<user>&password=<pass>"
+   curl -i http://localhost/api/auth/me/
+   ```

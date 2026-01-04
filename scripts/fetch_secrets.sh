@@ -35,10 +35,45 @@ if [[ "${secret_raw:0:1}" == "{" ]]; then
   env SECRET_RAW="$secret_raw" python3 - <<'PYCODE' > .env
 import json, os
 
+def escape(val: str) -> str:
+    return val.replace("$", "$$")
+
 payload = json.loads(os.environ["SECRET_RAW"])
+
+# Map standard RDS secret keys if present
+host = payload.get("host")
+user = payload.get("username")
+password = payload.get("password")
+dbname = payload.get("dbname")
+port = payload.get("port")
+engine = payload.get("engine")
+
+seen = set()
+if host:
+    print(f"DB_HOST={escape(str(host))}")
+    seen.add("DB_HOST")
+if user:
+    print(f"DB_USER={escape(str(user))}")
+    seen.add("DB_USER")
+if password:
+    print(f"DB_PASSWORD={escape(str(password))}")
+    seen.add("DB_PASSWORD")
+if dbname:
+    print(f"DB_NAME={escape(str(dbname))}")
+    seen.add("DB_NAME")
+if port:
+    print(f"DB_PORT={escape(str(port))}")
+    seen.add("DB_PORT")
+if engine:
+    print(f"DB_ENGINE={escape(str(engine))}")
+    seen.add("DB_ENGINE")
+
+# Also emit all keys verbatim -> env-friendly names (uppercase), but don't override mapped DB_* above
 for key, value in payload.items():
-    escaped = value.replace("$", "$$")
-    print(f"{key}={escaped}")
+    env_key = key.upper()
+    if env_key in seen:
+        continue
+    print(f"{env_key}={escape(str(value))}")
 PYCODE
 else
   echo "Secret looks like plaintext; writing to .env"
