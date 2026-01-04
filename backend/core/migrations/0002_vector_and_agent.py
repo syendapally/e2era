@@ -30,11 +30,6 @@ class Migration(migrations.Migration):
                 ("project", models.ForeignKey(on_delete=models.deletion.CASCADE, related_name="chunks", to="core.project")),
             ],
         ),
-        migrations.CreateIndex(
-            name="core_document_chunk_idx",
-            fields=["project", "document", "chunk_index"],
-            model_name="documentchunk",
-        ),
         migrations.CreateModel(
             name="ExperimentCode",
             fields=[
