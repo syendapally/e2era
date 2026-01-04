@@ -343,10 +343,7 @@ function App() {
 
   const renderProjects = () => (
     <div className="panel">
-      <h2>Projects</h2>
-      {!user ? (
-        <p className="muted">Sign in to manage your projects.</p>
-      ) : (
+      {projectView === 'list' ? (
         <>
           <div className="project-header">
             <h3>Your projects</h3>
@@ -360,136 +357,140 @@ function App() {
             </button>
           </div>
 
-          {showCreate ? (
-            <form className="card-box" onSubmit={createProject}>
-              <div className="field">
-                <label htmlFor="project-title">New project title</label>
-                <input
-                  id="project-title"
-                  name="project-title"
-                  value={newProjectTitle}
-                  onChange={(e) => setNewProjectTitle(e.target.value)}
-                  placeholder="My research project"
-                  required
-                />
-              </div>
-              <button type="submit" className="btn primary">
-                Create project
-              </button>
-              {projectError ? <div className="error">{projectError}</div> : null}
-            </form>
-          ) : null}
-
-          {projectView === 'list' ? (
-            <div className="project-grid">
-              {projects.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  className={
-                    selectedProject?.id === p.id
-                      ? 'project-card selected'
-                      : 'project-card'
-                  }
-                  onClick={() => {
-                    setSelectedProject(p)
-                    setProjectView('detail')
-                  }}
-                >
-                  <div className="project-title">{p.title}</div>
-                  <div className="project-meta">
-                    {(p.documents?.length || 0)} docs · {(p.notes?.length || 0)} notes
+          {!user ? (
+            <p className="muted">Sign in to manage your projects.</p>
+          ) : (
+            <>
+              {showCreate ? (
+                <form className="card-box" onSubmit={createProject}>
+                  <div className="field">
+                    <label htmlFor="project-title">New project title</label>
+                    <input
+                      id="project-title"
+                      name="project-title"
+                      value={newProjectTitle}
+                      onChange={(e) => setNewProjectTitle(e.target.value)}
+                      placeholder="My research project"
+                      required
+                    />
                   </div>
-                </button>
-              ))}
-              {!projects.length ? (
-                <p className="muted">No projects yet. Click + to add one.</p>
+                  <button type="submit" className="btn primary">
+                    Create project
+                  </button>
+                  {projectError ? <div className="error">{projectError}</div> : null}
+                </form>
               ) : null}
-            </div>
-          ) : null}
 
-          {projectView === 'detail' && selectedProject ? (
-            <div className="project-detail">
-              <div className="project-detail-header">
-                <div>
-                  <p className="muted">Project</p>
-                  <h3>{selectedProject.title}</h3>
+              <div className="project-grid">
+                {projects.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className={
+                      selectedProject?.id === p.id
+                        ? 'project-card selected'
+                        : 'project-card'
+                    }
+                    onClick={() => {
+                      setSelectedProject(p)
+                      setProjectView('detail')
+                    }}
+                  >
+                    <div className="project-title">{p.title}</div>
+                    <div className="project-meta">
+                      {(p.documents?.length || 0)} docs · {(p.notes?.length || 0)} notes
+                    </div>
+                  </button>
+                ))}
+                {!projects.length ? (
+                  <p className="muted">No projects yet. Click + to add one.</p>
+                ) : null}
+              </div>
+            </>
+          )}
+        </>
+      ) : null}
+
+      {projectView === 'detail' && selectedProject ? (
+        <div className="project-detail">
+          <div className="project-detail-header">
+            <div>
+              <p className="muted">Project</p>
+              <h3>{selectedProject.title}</h3>
+            </div>
+            <button
+              type="button"
+              className="btn tertiary"
+              onClick={() => {
+                setSelectedProject(null)
+                setProjectView('list')
+              }}
+            >
+              Back to projects
+            </button>
+          </div>
+          <div className="project-columns">
+            <div className="column">
+              <h4>Documents</h4>
+              <form className="upload-box" onSubmit={uploadDoc}>
+                <input type="file" name="file" accept=".pdf,.txt,.doc,.docx" />
+                <button
+                  type="submit"
+                  className="btn primary"
+                  disabled={uploading}
+                >
+                  {uploading ? 'Uploading...' : 'Upload'}
+                </button>
+              </form>
+              <ul className="doc-list">
+                {(selectedProject.documents || []).map((doc) => (
+                  <li key={doc.id}>
+                    <a href={doc.url} target="_blank" rel="noreferrer">
+                      {doc.name}
+                    </a>
+                  </li>
+                ))}
+                {!(selectedProject.documents || []).length ? (
+                  <p className="muted">No documents yet.</p>
+                ) : null}
+              </ul>
+            </div>
+            <div className="column">
+              <h4>Research notes</h4>
+              <form className="card-box" onSubmit={saveNote}>
+                <div className="field">
+                  <label htmlFor="note">What do you want to research?</label>
+                  <textarea
+                    id="note"
+                    name="note"
+                    rows={4}
+                    value={noteText}
+                    onChange={(e) => setNoteText(e.target.value)}
+                  />
                 </div>
                 <button
-                  type="button"
-                  className="btn tertiary"
-                  onClick={() => {
-                    setSelectedProject(null)
-                    setProjectView('list')
-                  }}
+                  type="submit"
+                  className="btn primary"
+                  disabled={savingNote}
                 >
-                  Back to projects
+                  {savingNote ? 'Saving...' : 'Save note'}
                 </button>
-              </div>
-              <div className="project-columns">
-                <div className="column">
-                  <h4>Documents</h4>
-                  <form className="upload-box" onSubmit={uploadDoc}>
-                    <input type="file" name="file" accept=".pdf,.txt,.doc,.docx" />
-                    <button
-                      type="submit"
-                      className="btn primary"
-                      disabled={uploading}
-                    >
-                      {uploading ? 'Uploading...' : 'Upload'}
-                    </button>
-                  </form>
-                  <ul className="doc-list">
-                    {(selectedProject.documents || []).map((doc) => (
-                      <li key={doc.id}>
-                        <a href={doc.url} target="_blank" rel="noreferrer">
-                          {doc.name}
-                        </a>
-                      </li>
-                    ))}
-                    {!(selectedProject.documents || []).length ? (
-                      <p className="muted">No documents yet.</p>
-                    ) : null}
-                  </ul>
-                </div>
-                <div className="column">
-                  <h4>Research notes</h4>
-                  <form className="card-box" onSubmit={saveNote}>
-                    <div className="field">
-                      <label htmlFor="note">What do you want to research?</label>
-                      <textarea
-                        id="note"
-                        name="note"
-                        rows={4}
-                        value={noteText}
-                        onChange={(e) => setNoteText(e.target.value)}
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      className="btn primary"
-                      disabled={savingNote}
-                    >
-                      {savingNote ? 'Saving...' : 'Save note'}
-                    </button>
-                  </form>
-                  <ul className="note-list">
-                    {(selectedProject.notes || []).map((note) => (
-                      <li key={note.id}>
-                        <div className="note-text">{note.content}</div>
-                        <div className="muted">{note.created_at}</div>
-                      </li>
-                    ))}
-                    {!(selectedProject.notes || []).length ? (
-                      <p className="muted">No notes yet.</p>
-                    ) : null}
-                  </ul>
-                </div>
-              </div>
+              </form>
+              <ul className="note-list">
+                {(selectedProject.notes || []).map((note) => (
+                  <li key={note.id}>
+                    <div className="note-text">{note.content}</div>
+                    <div className="muted">{note.created_at}</div>
+                  </li>
+                ))}
+                {!(selectedProject.notes || []).length ? (
+                  <p className="muted">No notes yet.</p>
+                ) : null}
+              </ul>
             </div>
-          ) : null}
-        </>
-      )}
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 
