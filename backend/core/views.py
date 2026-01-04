@@ -203,6 +203,26 @@ def project_note(request, project_id: int):
     return JsonResponse({"note": {"id": note.id, "content": note.content, "created_at": note.created_at.isoformat()}}, status=201)
 
 
+def latest_agent_payload(project: Project):
+    plan = project.plans.order_by("-created_at").first()
+    code = project.code_cells.order_by("-created_at").first()
+    report = project.reports.order_by("-created_at").first()
+    return {
+        "plan": plan.content if plan else None,
+        "code": {
+            "id": code.id,
+            "content": code.content,
+            "status": code.status,
+            "stdout": code.stdout,
+            "stderr": code.stderr,
+        } if code else None,
+        "report": {
+            "section": report.section,
+            "content": report.content,
+        } if report else None,
+    }
+
+
 # -------- Embeddings / Bedrock helpers --------
 
 
@@ -384,5 +404,19 @@ def try_parse_json(text: str):
         return json.loads(text)
     except Exception:
         return None
+
+
+def agent_data(request, project_id: int):
+    if not request.user.is_authenticated:
+        return JsonResponse({"error": "unauthorized"}, status=401)
+    try:
+        project = Project.objects.get(id=project_id, owner=request.user)
+    except Project.DoesNotExist:
+        return JsonResponse({"error": "not found"}, status=404)
+
+    if request.method != "GET":
+        return JsonResponse({"error": "method not allowed"}, status=405)
+
+    return JsonResponse(latest_agent_payload(project))
 
 

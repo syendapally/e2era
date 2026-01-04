@@ -22,6 +22,9 @@ function App() {
   const [showCreate, setShowCreate] = useState(false)
   const [selectedProject, setSelectedProject] = useState(null)
   const [projectView, setProjectView] = useState('list') // 'list' | 'detail'
+  const [agentData, setAgentData] = useState({ plan: null, code: null, report: null })
+  const [agentLoading, setAgentLoading] = useState(false)
+  const [agentError, setAgentError] = useState('')
   const [noteText, setNoteText] = useState('')
   const [uploading, setUploading] = useState(false)
   const [savingNote, setSavingNote] = useState(false)
@@ -136,6 +139,7 @@ function App() {
         setNewProjectTitle('')
         setShowCreate(false)
         setProjectView('detail')
+        setAgentData({ plan: null, code: null, report: null })
       })
       .catch((err) => setProjectError(err.message))
   }
@@ -214,6 +218,25 @@ function App() {
       setProjectError(err.message)
     } finally {
       setSavingNote(false)
+    }
+  }
+
+  const fetchAgentData = async (projectId) => {
+    setAgentError('')
+    try {
+      const res = await fetch(`/api/projects/${projectId}/agent/data/`, {
+        method: 'GET',
+        credentials: 'include',
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) throw new Error(data.error || 'Failed to load agent data')
+      setAgentData({
+        plan: data.plan || null,
+        code: data.code || null,
+        report: data.report || null,
+      })
+    } catch (err) {
+      setAgentError(err.message)
     }
   }
 
@@ -398,6 +421,7 @@ function App() {
                     onClick={() => {
                       setSelectedProject(p)
                       setProjectView('detail')
+                      fetchAgentData(p.id)
                     }}
                   >
                 <div className="project-title">{p.title}</div>
@@ -422,16 +446,48 @@ function App() {
               <p className="muted">Project</p>
               <h3>{selectedProject.title}</h3>
             </div>
-            <button
-              type="button"
-              className="btn tertiary"
-              onClick={() => {
-                setSelectedProject(null)
-                setProjectView('list')
-              }}
-            >
-              Back to projects
-            </button>
+            <div className="actions-row">
+              <button
+                type="button"
+                className="btn tertiary"
+                onClick={() => {
+                  setSelectedProject(null)
+                  setProjectView('list')
+                  setAgentData({ plan: null, code: null, report: null })
+                }}
+              >
+                Back to projects
+              </button>
+              <button
+                type="button"
+                className="btn primary"
+                disabled={agentLoading}
+                onClick={async () => {
+                  if (!selectedProject) return
+                  setAgentError('')
+                  setAgentLoading(true)
+                  try {
+                    const res = await fetch(
+                      `/api/projects/${selectedProject.id}/agent/run/`,
+                      { method: 'POST', credentials: 'include' },
+                    )
+                    const data = await res.json()
+                    if (!res.ok || data.error) throw new Error(data.error || 'Agent failed')
+                    setAgentData({
+                      plan: data.plan || null,
+                      code: data.code || null,
+                      report: data.report || null,
+                    })
+                  } catch (err) {
+                    setAgentError(err.message)
+                  } finally {
+                    setAgentLoading(false)
+                  }
+                }}
+              >
+                {agentLoading ? 'Running...' : 'Run agent'}
+              </button>
+            </div>
           </div>
           <div className="project-columns">
             <div className="column">
@@ -491,6 +547,43 @@ function App() {
                   <p className="muted">No notes yet.</p>
                 ) : null}
               </ul>
+            </div>
+            <div className="column">
+              <h4>Agent output</h4>
+              {agentError ? <div className="error">{agentError}</div> : null}
+              <div className="card-box">
+                <p className="muted">Plan</p>
+                {agentData.plan ? (
+                  <ul className="note-list">
+                    {(agentData.plan.plan || []).map((step, idx) => (
+                      <li key={idx}>{step}</li>
+                    ))}
+                    {agentData.plan.summary ? (
+                      <li className="muted">Summary: {agentData.plan.summary}</li>
+                    ) : null}
+                  </ul>
+                ) : (
+                  <p className="muted">No plan yet.</p>
+                )}
+              </div>
+              <div className="card-box">
+                <p className="muted">Code</p>
+                {agentData.code ? (
+                  <pre className="code-block">
+                    {agentData.code.content}
+                  </pre>
+                ) : (
+                  <p className="muted">No code yet.</p>
+                )}
+              </div>
+              <div className="card-box">
+                <p className="muted">Report</p>
+                {agentData.report ? (
+                  <p>{agentData.report.content}</p>
+                ) : (
+                  <p className="muted">No report yet.</p>
+                )}
+              </div>
             </div>
           </div>
         </div>
