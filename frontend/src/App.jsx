@@ -21,6 +21,7 @@ function App() {
   const [newProjectTitle, setNewProjectTitle] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [selectedProject, setSelectedProject] = useState(null)
+  const [projectView, setProjectView] = useState('list') // 'list' | 'detail'
   const [noteText, setNoteText] = useState('')
   const [uploading, setUploading] = useState(false)
   const [savingNote, setSavingNote] = useState(false)
@@ -110,6 +111,7 @@ function App() {
           setSelectedProject((prev) => prev || data.projects[0])
         } else {
           setSelectedProject(null)
+          setProjectView('list')
         }
       })
       .catch(() => setProjectError('Could not load projects'))
@@ -133,6 +135,7 @@ function App() {
         setSelectedProject(proj)
         setNewProjectTitle('')
         setShowCreate(false)
+        setProjectView('detail')
       })
       .catch((err) => setProjectError(err.message))
   }
@@ -377,30 +380,35 @@ function App() {
             </form>
           ) : null}
 
-          <div className="project-grid">
-            {projects.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                className={
-                  selectedProject?.id === p.id
-                    ? 'project-card selected'
-                    : 'project-card'
-                }
-                onClick={() => setSelectedProject(p)}
-              >
-                <div className="project-title">{p.title}</div>
-                <div className="project-meta">
-                  {(p.documents?.length || 0)} docs · {(p.notes?.length || 0)} notes
-                </div>
-              </button>
-            ))}
-            {!projects.length ? (
-              <p className="muted">No projects yet. Click + to add one.</p>
-            ) : null}
-          </div>
+          {projectView === 'list' ? (
+            <div className="project-grid">
+              {projects.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  className={
+                    selectedProject?.id === p.id
+                      ? 'project-card selected'
+                      : 'project-card'
+                  }
+                  onClick={() => {
+                    setSelectedProject(p)
+                    setProjectView('detail')
+                  }}
+                >
+                  <div className="project-title">{p.title}</div>
+                  <div className="project-meta">
+                    {(p.documents?.length || 0)} docs · {(p.notes?.length || 0)} notes
+                  </div>
+                </button>
+              ))}
+              {!projects.length ? (
+                <p className="muted">No projects yet. Click + to add one.</p>
+              ) : null}
+            </div>
+          ) : null}
 
-          {selectedProject ? (
+          {projectView === 'detail' && selectedProject ? (
             <div className="project-detail">
               <div className="project-detail-header">
                 <div>
@@ -410,7 +418,10 @@ function App() {
                 <button
                   type="button"
                   className="btn tertiary"
-                  onClick={() => setSelectedProject(null)}
+                  onClick={() => {
+                    setSelectedProject(null)
+                    setProjectView('list')
+                  }}
                 >
                   Back to projects
                 </button>
