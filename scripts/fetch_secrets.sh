@@ -21,6 +21,15 @@ secret_raw=$(aws secretsmanager get-secret-value \
   --query SecretString \
   --output text)
 
+escape_for_env() {
+  # Escape $ for docker compose interpolation safety
+  python3 - "$1" <<'PYCODE'
+import sys
+value = sys.argv[1]
+print(value.replace("$", "$$"))
+PYCODE
+}
+
 if [[ "${secret_raw:0:1}" == "{" ]]; then
   echo "Secret looks like JSON; rendering key=value lines to .env"
   env SECRET_RAW="$secret_raw" python3 - <<'PYCODE' > .env
@@ -28,11 +37,23 @@ import json, os
 
 payload = json.loads(os.environ["SECRET_RAW"])
 for key, value in payload.items():
-    print(f"{key}={value}")
+    escaped = value.replace("$", "$$")
+    print(f"{key}={escaped}")
 PYCODE
 else
   echo "Secret looks like plaintext; writing to .env"
-  printf "%s\n" "$secret_raw" > .env
+  # Escape dollars in each line to avoid compose warnings
+  printf "%s\n" "$secret_raw" | python3 - <<'PYCODE' > .env
+import sys
+for line in sys.stdin:
+    line = line.rstrip("\n")
+    if not line.strip() or "=" not in line:
+        print(line)
+        continue
+    key, value = line.split("=", 1)
+    value = value.replace("$", "$$")
+    print(f"{key}={value}")
+PYCODE
 fi
 
 python3 - <<'PYCODE' > .env.exports
