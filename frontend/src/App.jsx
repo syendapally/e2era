@@ -2,30 +2,13 @@ import { useEffect, useMemo, useState } from 'react'
 import './App.css'
 
 const tabs = [
-  {
-    id: 'overview',
-    label: 'Overview',
-    body: 'Hello world from E2ERA. This is a React + Django + Nginx starter.',
-  },
-  {
-    id: 'account',
-    label: 'Account',
-    body: 'Sign in or create an account to see your session info.',
-  },
-  {
-    id: 'settings',
-    label: 'Settings',
-    body: 'Keep environment-driven settings in AWS Secrets Manager.',
-  },
-  {
-    id: 'support',
-    label: 'Support',
-    body: 'Add docs, links, or contact details here.',
-  },
+  { id: 'projects', label: 'Projects', body: '' },
+  { id: 'account', label: 'Account', body: 'Sign in or create an account.' },
+  { id: 'overview', label: 'Overview', body: 'Hello world from E2ERA. React + Django + Nginx starter.' },
 ]
 
 function App() {
-  const [activeTab, setActiveTab] = useState('account')
+  const [activeTab, setActiveTab] = useState('projects')
   const [apiMessage, setApiMessage] = useState('Checking backend...')
   const [user, setUser] = useState(null)
   const [authError, setAuthError] = useState('')
@@ -33,6 +16,13 @@ function App() {
   const [formState, setFormState] = useState({ username: '', password: '' })
   const [mode, setMode] = useState('login')
   const [email, setEmail] = useState('')
+  const [projects, setProjects] = useState([])
+  const [projectError, setProjectError] = useState('')
+  const [newProjectTitle, setNewProjectTitle] = useState('')
+  const [selectedProject, setSelectedProject] = useState(null)
+  const [noteText, setNoteText] = useState('')
+  const [uploading, setUploading] = useState(false)
+  const [savingNote, setSavingNote] = useState(false)
   const currentTab = useMemo(
     () => tabs.find((tab) => tab.id === activeTab) ?? tabs[0],
     [activeTab],
@@ -57,6 +47,7 @@ function App() {
       })
       .then((data) => {
         setUser(data.user)
+        loadProjects()
       })
       .catch(() => {
         setUser(null)
@@ -88,6 +79,7 @@ function App() {
         }
         setUser(data.user)
         setFormState({ username: '', password: '' })
+        loadProjects()
       })
       .catch((err) => setAuthError(err.message))
       .finally(() => setAuthLoading(false))
@@ -98,8 +90,114 @@ function App() {
     fetch('/api/auth/logout/', { method: 'POST', credentials: 'include' })
       .then(() => {
         setUser(null)
+        setProjects([])
+        setSelectedProject(null)
       })
       .finally(() => setAuthLoading(false))
+  }
+
+  const loadProjects = () => {
+    setProjectError('')
+    fetch('/api/projects/', { credentials: 'include' })
+      .then((res) => {
+        if (!res.ok) throw new Error('failed to load projects')
+        return res.json()
+      })
+      .then((data) => {
+        setProjects(data.projects || [])
+        if (data.projects?.length) {
+          setSelectedProject((prev) => prev || data.projects[0])
+        } else {
+          setSelectedProject(null)
+        }
+      })
+      .catch(() => setProjectError('Could not load projects'))
+  }
+
+  const createProject = (e) => {
+    e.preventDefault()
+    if (!newProjectTitle.trim()) return
+    setProjectError('')
+    fetch('/api/projects/', {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ title: newProjectTitle.trim() }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.error) throw new Error(data.error)
+        const proj = data.project
+        setProjects((prev) => [proj, ...prev])
+        setSelectedProject(proj)
+        setNewProjectTitle('')
+      })
+      .catch((err) => setProjectError(err.message))
+  }
+
+  const uploadDoc = async (e) => {
+    e.preventDefault()
+    if (!selectedProject) return
+    const file = e.target.file?.files?.[0]
+    if (!file) return
+    setUploading(true)
+    const formData = new FormData()
+    formData.append('file', file)
+    try {
+      const res = await fetch(`/api/projects/${selectedProject.id}/upload/`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) throw new Error(data.error || 'Upload failed')
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id === selectedProject.id
+            ? { ...p, documents: [data.document, ...(p.documents || [])] }
+            : p,
+        ),
+      )
+      setSelectedProject((prev) =>
+        prev ? { ...prev, documents: [data.document, ...(prev.documents || [])] } : prev,
+      )
+      e.target.reset()
+    } catch (err) {
+      setProjectError(err.message)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const saveNote = async (e) => {
+    e.preventDefault()
+    if (!selectedProject || !noteText.trim()) return
+    setSavingNote(true)
+    try {
+      const res = await fetch(`/api/projects/${selectedProject.id}/notes/`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ content: noteText.trim() }),
+      })
+      const data = await res.json()
+      if (!res.ok || data.error) throw new Error(data.error || 'Save failed')
+      setProjects((prev) =>
+        prev.map((p) =>
+          p.id === selectedProject.id
+            ? { ...p, notes: [data.note, ...(p.notes || [])] }
+            : p,
+        ),
+      )
+      setSelectedProject((prev) =>
+        prev ? { ...prev, notes: [data.note, ...(prev.notes || [])] } : prev,
+      )
+      setNoteText('')
+    } catch (err) {
+      setProjectError(err.message)
+    } finally {
+      setSavingNote(false)
+    }
   }
 
   const register = (e) => {
@@ -125,116 +223,224 @@ function App() {
         setUser(data.user)
         setFormState({ username: '', password: '' })
         setEmail('')
+        loadProjects()
       })
       .catch((err) => setAuthError(err.message))
       .finally(() => setAuthLoading(false))
   }
 
-  const renderPanel = () => {
-    if (currentTab.id === 'account') {
-      return (
-        <div className="panel">
-          <h2>Account</h2>
-          {user ? (
-            <div className="card-box">
-              <p className="muted">Signed in as</p>
-              <div className="user-row">
-                <div>
-                  <div className="user-name">{user.username}</div>
-                  {user.email ? <div className="muted">{user.email}</div> : null}
+  const renderAccount = () => (
+    <div className="panel">
+      <h2>Account</h2>
+      {user ? (
+        <div className="card-box">
+          <p className="muted">Signed in as</p>
+          <div className="user-row">
+            <div>
+              <div className="user-name">{user.username}</div>
+              {user.email ? <div className="muted">{user.email}</div> : null}
+            </div>
+            <button
+              type="button"
+              className="btn secondary"
+              onClick={logout}
+              disabled={authLoading}
+            >
+              {authLoading ? 'Signing out...' : 'Sign out'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <form
+          className="card-box"
+          onSubmit={mode === 'login' ? login : register}
+        >
+          <div className="field">
+            <label htmlFor="username">Username</label>
+            <input
+              id="username"
+              name="username"
+              autoComplete="username"
+              value={formState.username}
+              onChange={handleInput}
+              required
+            />
+          </div>
+          {mode === 'register' ? (
+            <div className="field">
+              <label htmlFor="email">Email (optional)</label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+          ) : null}
+          <div className="field">
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              value={formState.password}
+              onChange={handleInput}
+              required
+            />
+          </div>
+          {authError ? <div className="error">{authError}</div> : null}
+          <div className="actions-row">
+            <button
+              type="submit"
+              className="btn primary"
+              disabled={authLoading}
+            >
+              {authLoading
+                ? mode === 'login'
+                  ? 'Signing in...'
+                  : 'Creating...'
+                : mode === 'login'
+                  ? 'Sign in'
+                  : 'Create account'}
+            </button>
+            <button
+              type="button"
+              className="btn tertiary"
+              onClick={() => {
+                setMode((m) => (m === 'login' ? 'register' : 'login'))
+                setAuthError('')
+              }}
+            >
+              {mode === 'login'
+                ? 'Need an account? Register'
+                : 'Have an account? Sign in'}
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  )
+
+  const renderProjects = () => (
+    <div className="panel">
+      <h2>Projects</h2>
+      {!user ? (
+        <p className="muted">Sign in to manage your projects.</p>
+      ) : (
+        <>
+          <form className="card-box" onSubmit={createProject}>
+            <div className="field">
+              <label htmlFor="project-title">New project title</label>
+              <input
+                id="project-title"
+                name="project-title"
+                value={newProjectTitle}
+                onChange={(e) => setNewProjectTitle(e.target.value)}
+                placeholder="My research project"
+                required
+              />
+            </div>
+            <button type="submit" className="btn primary">
+              Create project
+            </button>
+            {projectError ? <div className="error">{projectError}</div> : null}
+          </form>
+
+          <div className="project-grid">
+            {projects.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className={
+                  selectedProject?.id === p.id
+                    ? 'project-card selected'
+                    : 'project-card'
+                }
+                onClick={() => setSelectedProject(p)}
+              >
+                <div className="project-title">{p.title}</div>
+                <div className="project-meta">
+                  {(p.documents?.length || 0)} docs · {(p.notes?.length || 0)} notes
                 </div>
-                <button
-                  type="button"
-                  className="btn secondary"
-                  onClick={logout}
-                  disabled={authLoading}
-                >
-                  {authLoading ? 'Signing out...' : 'Sign out'}
-                </button>
+              </button>
+            ))}
+            {!projects.length ? (
+              <p className="muted">No projects yet. Create one above.</p>
+            ) : null}
+          </div>
+
+          {selectedProject ? (
+            <div className="project-detail">
+              <h3>{selectedProject.title}</h3>
+              <div className="project-columns">
+                <div className="column">
+                  <h4>Documents</h4>
+                  <form className="upload-box" onSubmit={uploadDoc}>
+                    <input type="file" name="file" accept=".pdf,.txt,.doc,.docx" />
+                    <button
+                      type="submit"
+                      className="btn primary"
+                      disabled={uploading}
+                    >
+                      {uploading ? 'Uploading...' : 'Upload'}
+                    </button>
+                  </form>
+                  <ul className="doc-list">
+                    {(selectedProject.documents || []).map((doc) => (
+                      <li key={doc.id}>
+                        <a href={doc.url} target="_blank" rel="noreferrer">
+                          {doc.name}
+                        </a>
+                      </li>
+                    ))}
+                    {!(selectedProject.documents || []).length ? (
+                      <p className="muted">No documents yet.</p>
+                    ) : null}
+                  </ul>
+                </div>
+                <div className="column">
+                  <h4>Research notes</h4>
+                  <form className="card-box" onSubmit={saveNote}>
+                    <div className="field">
+                      <label htmlFor="note">What do you want to research?</label>
+                      <textarea
+                        id="note"
+                        name="note"
+                        rows={4}
+                        value={noteText}
+                        onChange={(e) => setNoteText(e.target.value)}
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="btn primary"
+                      disabled={savingNote}
+                    >
+                      {savingNote ? 'Saving...' : 'Save note'}
+                    </button>
+                  </form>
+                  <ul className="note-list">
+                    {(selectedProject.notes || []).map((note) => (
+                      <li key={note.id}>
+                        <div className="note-text">{note.content}</div>
+                        <div className="muted">{note.created_at}</div>
+                      </li>
+                    ))}
+                    {!(selectedProject.notes || []).length ? (
+                      <p className="muted">No notes yet.</p>
+                    ) : null}
+                  </ul>
+                </div>
               </div>
             </div>
-          ) : (
-            <form
-              className="card-box"
-              onSubmit={mode === 'login' ? login : register}
-            >
-              <div className="field">
-                <label htmlFor="username">Username</label>
-                <input
-                  id="username"
-                  name="username"
-                  autoComplete="username"
-                  value={formState.username}
-                  onChange={handleInput}
-                  required
-                />
-              </div>
-              {mode === 'register' ? (
-                <div className="field">
-                  <label htmlFor="email">Email (optional)</label>
-                  <input
-                    id="email"
-                    name="email"
-                    type="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
-              ) : null}
-              <div className="field">
-                <label htmlFor="password">Password</label>
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  value={formState.password}
-                  onChange={handleInput}
-                  required
-                />
-              </div>
-              {authError ? <div className="error">{authError}</div> : null}
-              <div className="actions-row">
-                <button
-                  type="submit"
-                  className="btn primary"
-                  disabled={authLoading}
-                >
-                  {authLoading
-                    ? mode === 'login'
-                      ? 'Signing in...'
-                      : 'Creating...'
-                    : mode === 'login'
-                      ? 'Sign in'
-                      : 'Create account'}
-                </button>
-                <button
-                  type="button"
-                  className="btn tertiary"
-                  onClick={() => {
-                    setMode((m) => (m === 'login' ? 'register' : 'login'))
-                    setAuthError('')
-                  }}
-                >
-                  {mode === 'login'
-                    ? 'Need an account? Register'
-                    : 'Have an account? Sign in'}
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-      )
-    }
-
-    return (
-      <section className="panel">
-        <h2>{currentTab.label}</h2>
-        <p>{currentTab.body}</p>
-      </section>
-    )
-  }
+          ) : null}
+        </>
+      )}
+    </div>
+  )
 
   return (
     <div className="page">
@@ -274,7 +480,14 @@ function App() {
         ))}
       </nav>
 
-      {renderPanel()}
+      {activeTab === 'projects' ? renderProjects() : null}
+      {activeTab === 'account' ? renderAccount() : null}
+      {activeTab === 'overview' ? (
+        <section className="panel">
+          <h2>{currentTab.label}</h2>
+          <p>{currentTab.body}</p>
+        </section>
+      ) : null}
     </div>
   )
 }
