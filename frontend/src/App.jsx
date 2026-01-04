@@ -149,7 +149,13 @@ function App() {
         credentials: 'include',
         body: formData,
       })
-      const data = await res.json()
+      const text = await res.text()
+      let data = {}
+      try {
+        data = JSON.parse(text)
+      } catch {
+        throw new Error('Upload failed (unexpected response)')
+      }
       if (!res.ok || data.error) throw new Error(data.error || 'Upload failed')
       setProjects((prev) =>
         prev.map((p) =>
@@ -180,7 +186,13 @@ function App() {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({ content: noteText.trim() }),
       })
-      const data = await res.json()
+      const text = await res.text()
+      let data = {}
+      try {
+        data = JSON.parse(text)
+      } catch {
+        throw new Error('Save failed (unexpected response)')
+      }
       if (!res.ok || data.error) throw new Error(data.error || 'Save failed')
       setProjects((prev) =>
         prev.map((p) =>
@@ -331,23 +343,37 @@ function App() {
         <p className="muted">Sign in to manage your projects.</p>
       ) : (
         <>
-          <form className="card-box" onSubmit={createProject}>
-            <div className="field">
-              <label htmlFor="project-title">New project title</label>
-              <input
-                id="project-title"
-                name="project-title"
-                value={newProjectTitle}
-                onChange={(e) => setNewProjectTitle(e.target.value)}
-                placeholder="My research project"
-                required
-              />
-            </div>
-            <button type="submit" className="btn primary">
-              Create project
+          <div className="project-header">
+            <h3>Your projects</h3>
+            <button
+              type="button"
+              className="icon-button"
+              onClick={() => setShowCreate((v) => !v)}
+              title="Create project"
+            >
+              +
             </button>
-            {projectError ? <div className="error">{projectError}</div> : null}
-          </form>
+          </div>
+
+          {showCreate ? (
+            <form className="card-box" onSubmit={createProject}>
+              <div className="field">
+                <label htmlFor="project-title">New project title</label>
+                <input
+                  id="project-title"
+                  name="project-title"
+                  value={newProjectTitle}
+                  onChange={(e) => setNewProjectTitle(e.target.value)}
+                  placeholder="My research project"
+                  required
+                />
+              </div>
+              <button type="submit" className="btn primary">
+                Create project
+              </button>
+              {projectError ? <div className="error">{projectError}</div> : null}
+            </form>
+          ) : null}
 
           <div className="project-grid">
             {projects.map((p) => (
@@ -368,13 +394,18 @@ function App() {
               </button>
             ))}
             {!projects.length ? (
-              <p className="muted">No projects yet. Create one above.</p>
+              <p className="muted">No projects yet. Click + to add one.</p>
             ) : null}
           </div>
 
           {selectedProject ? (
             <div className="project-detail">
-              <h3>{selectedProject.title}</h3>
+              <div className="project-detail-header">
+                <div>
+                  <p className="muted">Project</p>
+                  <h3>{selectedProject.title}</h3>
+                </div>
+              </div>
               <div className="project-columns">
                 <div className="column">
                   <h4>Documents</h4>
