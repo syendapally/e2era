@@ -22,7 +22,7 @@ function App() {
   const [showCreate, setShowCreate] = useState(false)
   const [selectedProject, setSelectedProject] = useState(null)
   const [projectView, setProjectView] = useState('list') // 'list' | 'detail'
-  const [agentData, setAgentData] = useState({ plan: null, code: null, report: null })
+  const [agentData, setAgentData] = useState({ plan: null })
   const [agentLoading, setAgentLoading] = useState(false)
   const [agentError, setAgentError] = useState('')
   const [noteText, setNoteText] = useState('')
@@ -232,8 +232,6 @@ function App() {
       if (!res.ok || data.error) throw new Error(data.error || 'Failed to load agent data')
       setAgentData({
         plan: data.plan || null,
-        code: data.code || null,
-        report: data.report || null,
       })
     } catch (err) {
       setAgentError(err.message)
@@ -453,7 +451,7 @@ function App() {
                 onClick={() => {
                   setSelectedProject(null)
                   setProjectView('list')
-                  setAgentData({ plan: null, code: null, report: null })
+                  setAgentData({ plan: null })
                 }}
               >
                 Back to projects
@@ -475,8 +473,6 @@ function App() {
                     if (!res.ok || data.error) throw new Error(data.error || 'Agent failed')
                     setAgentData({
                       plan: data.plan || null,
-                      code: data.code || null,
-                      report: data.report || null,
                     })
                   } catch (err) {
                     setAgentError(err.message)
@@ -564,24 +560,6 @@ function App() {
                   </ul>
                 ) : (
                   <p className="muted">No plan yet.</p>
-                )}
-              </div>
-              <div className="card-box">
-                <p className="muted">Code</p>
-                {agentData.code ? (
-                  <pre className="code-block">
-                    {agentData.code.content}
-                  </pre>
-                ) : (
-                  <p className="muted">No code yet.</p>
-                )}
-              </div>
-              <div className="card-box">
-                <p className="muted">Report</p>
-                {agentData.report ? (
-                  <p>{agentData.report.content}</p>
-                ) : (
-                  <p className="muted">No report yet.</p>
                 )}
               </div>
             </div>
