@@ -4,7 +4,7 @@ import './App.css'
 const tabs = [
   { id: 'projects', label: 'Projects', body: '' },
   { id: 'account', label: 'Account', body: 'Sign in or create an account.' },
-  { id: 'overview', label: 'Overview', body: 'Hello world from E2ERA. React + Django + Nginx starter.' },
+  { id: 'overview', label: 'Overview', body: 'E2ERA is an end-to-end research agent: plan, experiment, code, and draft papers with your uploaded context.' },
 ]
 
 function App() {
@@ -346,7 +346,10 @@ function App() {
       {projectView === 'list' ? (
         <>
           <div className="project-header">
-            <h3>Your projects</h3>
+            <div>
+              <p className="muted">Workspace</p>
+              <h3>Your research projects</h3>
+            </div>
             <button
               type="button"
               className="icon-button"
@@ -354,6 +357,7 @@ function App() {
               title="Create project"
             >
               +
+              <span className="icon-label">New project</span>
             </button>
           </div>
 
@@ -396,14 +400,14 @@ function App() {
                       setProjectView('detail')
                     }}
                   >
-                    <div className="project-title">{p.title}</div>
-                    <div className="project-meta">
-                      {(p.documents?.length || 0)} docs · {(p.notes?.length || 0)} notes
-                    </div>
+                <div className="project-title">{p.title}</div>
+                <div className="project-meta">
+                  {(p.documents?.length || 0)} docs · {(p.notes?.length || 0)} notes
+                </div>
                   </button>
                 ))}
                 {!projects.length ? (
-                  <p className="muted">No projects yet. Click + to add one.</p>
+                  <p className="muted">No projects yet. Click “New project” to start.</p>
                 ) : null}
               </div>
             </>
@@ -498,10 +502,10 @@ function App() {
     <div className="page">
       <header className="hero">
         <div>
-          <p className="eyebrow">E2E Ready App</p>
+          <p className="eyebrow">End-to-End Research Agent</p>
           <h1>E2ERA</h1>
           <p className="subtitle">
-            React frontend, Django backend, Nginx edge. Docker Compose ready.
+            Plan, run, and compile research with code, experiments, and papers—backed by your uploaded sources.
           </p>
         </div>
         <div className="hero-right">
