@@ -1,4 +1,5 @@
 from django.db import migrations, models
+from pgvector.django import VectorField
 
 
 def create_vector_extension(apps, schema_editor):
@@ -23,7 +24,7 @@ class Migration(migrations.Migration):
                 ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
                 ("chunk_index", models.IntegerField()),
                 ("content", models.TextField()),
-                ("embedding", models.Field(null=True, db_type="vector(1536)")),
+                ("embedding", VectorField(dimensions=1536, null=True)),
                 ("created_at", models.DateTimeField(auto_now_add=True)),
                 ("document", models.ForeignKey(on_delete=models.deletion.CASCADE, related_name="chunks", to="core.document")),
                 ("project", models.ForeignKey(on_delete=models.deletion.CASCADE, related_name="chunks", to="core.project")),
