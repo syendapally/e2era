@@ -23,9 +23,10 @@ secret_raw=$(aws secretsmanager get-secret-value \
 
 if [[ "${secret_raw:0:1}" == "{" ]]; then
   echo "Secret looks like JSON; rendering key=value lines to .env"
-  python3 - <<'PYCODE' "$secret_raw" > .env
-import json, os, sys
-payload = json.loads(os.environ["secret_raw"])
+  env SECRET_RAW="$secret_raw" python3 - <<'PYCODE' > .env
+import json, os
+
+payload = json.loads(os.environ["SECRET_RAW"])
 for key, value in payload.items():
     print(f"{key}={value}")
 PYCODE
