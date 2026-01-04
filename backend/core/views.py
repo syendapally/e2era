@@ -1,4 +1,4 @@
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -33,6 +33,25 @@ def login_view(request):
 def logout_view(request):
     logout(request)
     return JsonResponse({"ok": True})
+
+
+@csrf_exempt
+@require_POST
+def register_view(request):
+    username = request.POST.get("username")
+    password = request.POST.get("password")
+    email = request.POST.get("email", "")
+
+    if not username or not password:
+        return JsonResponse({"error": "username and password required"}, status=400)
+
+    User = get_user_model()
+    if User.objects.filter(username=username).exists():
+        return JsonResponse({"error": "username already exists"}, status=400)
+
+    user = User.objects.create_user(username=username, password=password, email=email)
+    login(request, user)
+    return JsonResponse({"ok": True, "user": {"username": user.username, "email": user.email}})
 
 
 def me(request):
