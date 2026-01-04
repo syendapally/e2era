@@ -1,0 +1,96 @@
+#root {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+  color: #0f172a;
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  color: #475569;
+  margin: 0 0 0.25rem;
+}
+
+h1 {
+  margin: 0;
+  font-size: 2.5rem;
+  color: #0f172a;
+}
+
+.subtitle {
+  margin: 0.35rem 0 0;
+  color: #475569;
+}
+
+.badge {
+  padding: 0.35rem 0.75rem;
+  background: #ecfeff;
+  color: #0ea5e9;
+  border: 1px solid #bae6fd;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  align-self: flex-start;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+  flex-wrap: wrap;
+}
+
+.tab {
+  border: 1px solid transparent;
+  border-radius: 10px 10px 0 0;
+  background: #f8fafc;
+  padding: 0.55rem 0.9rem;
+  color: #0f172a;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tab:hover {
+  background: #e2e8f0;
+}
+
+.tab.active {
+  background: #fff;
+  border-color: #e2e8f0;
+  border-bottom-color: #fff;
+  box-shadow: 0 -2px 8px rgba(15, 23, 42, 0.08);
+}
+
+.panel {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  background: #fff;
+  box-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+}
+
+.panel h2 {
+  margin: 0 0 0.5rem;
+  color: #0f172a;
+}
+
+.panel p {
+  margin: 0;
+  color: #475569;
+}
