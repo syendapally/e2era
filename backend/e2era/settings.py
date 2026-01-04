@@ -16,6 +16,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "pgvector.django",
     "core",
 ]
 
@@ -94,6 +95,11 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+
+# Bedrock / embeddings
+BEDROCK_REGION = os.getenv("BEDROCK_REGION", os.getenv("AWS_REGION", "us-east-1"))
+BEDROCK_TEXT_MODEL = os.getenv("BEDROCK_TEXT_MODEL", "anthropic.claude-3-haiku-20240307-v1:0")
+BEDROCK_EMBEDDING_MODEL = os.getenv("BEDROCK_EMBEDDING_MODEL", "amazon.titan-embed-text-v1")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
