@@ -19,6 +19,7 @@ function App() {
   const [projects, setProjects] = useState([])
   const [projectError, setProjectError] = useState('')
   const [newProjectTitle, setNewProjectTitle] = useState('')
+  const [showCreate, setShowCreate] = useState(false)
   const [selectedProject, setSelectedProject] = useState(null)
   const [noteText, setNoteText] = useState('')
   const [uploading, setUploading] = useState(false)
@@ -131,6 +132,7 @@ function App() {
         setProjects((prev) => [proj, ...prev])
         setSelectedProject(proj)
         setNewProjectTitle('')
+        setShowCreate(false)
       })
       .catch((err) => setProjectError(err.message))
   }
@@ -405,6 +407,13 @@ function App() {
                   <p className="muted">Project</p>
                   <h3>{selectedProject.title}</h3>
                 </div>
+                <button
+                  type="button"
+                  className="btn tertiary"
+                  onClick={() => setSelectedProject(null)}
+                >
+                  Back to projects
+                </button>
               </div>
               <div className="project-columns">
                 <div className="column">
