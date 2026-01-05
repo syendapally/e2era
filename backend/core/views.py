@@ -246,7 +246,11 @@ def run_agent(request, project_id: int):
     )
 
     # ReAct agent (retrieve + run_code tools); final answer from LLM
-    result = run_agent_pipeline(project.id, goal)
+    try:
+        result = run_agent_pipeline(project.id, goal) or {}
+    except Exception as exc:  # pragma: no cover - defensive surface for frontend UX
+        return JsonResponse({"error": f"agent failed: {exc}"}, status=500)
+
     answer = result.get("answer")
     code = result.get("code")
     exec_out = result.get("exec")
