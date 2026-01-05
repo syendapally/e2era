@@ -62,7 +62,7 @@ def run_agent_pipeline(project_id: int, goal: str) -> Dict[str, Any]:
                 "When invoking a tool, use its exact name from: {tool_names}.",
             ),
             ("user", "Goal:\n{input}"),
-            MessagesPlaceholder("agent_scratchpad"),
+            MessagesPlaceholder("agent_scratchpad", optional=True),
         ]
     ).partial(
         tools=render_text_description(tools),
@@ -71,7 +71,12 @@ def run_agent_pipeline(project_id: int, goal: str) -> Dict[str, Any]:
 
     llm = get_llm()
     agent = create_react_agent(llm, tools, prompt)
-    executor = AgentExecutor(agent=agent, tools=tools, verbose=False)
+    executor = AgentExecutor(
+        agent=agent,
+        tools=tools,
+        verbose=False,
+        handle_parsing_errors=True,
+    )
 
     result = executor.invoke({"input": goal})
     output_text = result.get("output", "")
