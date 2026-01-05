@@ -4,6 +4,7 @@ from typing import Dict, Any, List
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain.agents import Tool
 from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.tools.render import render_text_description
 
 from llm.bedrock import get_llm
 from llm.code_exec import run_python_code
@@ -55,9 +56,17 @@ def run_agent_pipeline(project_id: int, goal: str) -> Dict[str, Any]:
                 "If you run code, keep it small/self-contained and in your final answer briefly explain: "
                 "the intent, the code (high level), and the results (stdout/stderr). Do not fabricate.",
             ),
+            (
+                "system",
+                "TOOLS AVAILABLE:\n{tools}\n"
+                "When invoking a tool, use its exact name from: {tool_names}.",
+            ),
             ("user", "Goal:\n{goal}"),
             MessagesPlaceholder("agent_scratchpad"),
         ]
+    ).partial(
+        tools=render_text_description(tools),
+        tool_names=", ".join([t.name for t in tools]),
     )
 
     llm = get_llm()
