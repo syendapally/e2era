@@ -4,7 +4,7 @@ from typing import Optional
 import boto3
 from botocore.config import Config
 from django.conf import settings
-from langchain_aws import BedrockLLM, BedrockEmbeddings
+from langchain_aws import BedrockEmbeddings, ChatBedrock
 
 
 def _bedrock_client():
@@ -22,7 +22,8 @@ def _bedrock_client():
 
 
 def get_llm(model_id: Optional[str] = None):
-    return BedrockLLM(
+    # Claude 3 models require the chat client
+    return ChatBedrock(
         client=_bedrock_client(),
         model_id=model_id or settings.BEDROCK_TEXT_MODEL,
     )

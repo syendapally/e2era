@@ -37,7 +37,11 @@ def run_agent_pipeline(project_id: int, goal: str) -> Dict[str, Any]:
         Tool(
             name="run_code",
             func=run_code_tool,
-            description="Use to run small Python experiments. Input: Python code as a string. Returns stdout/stderr.",
+            description=(
+                "Use to run small Python experiments. Input must be Python code you just generated, "
+                "as a single string. Do not call this unless code meaningfully improves the answer. "
+                "Returns stdout/stderr."
+            ),
         ),
     ]
 
@@ -46,7 +50,8 @@ def run_agent_pipeline(project_id: int, goal: str) -> Dict[str, Any]:
             (
                 "system",
                 "You are a research agent. Always retrieve context first. "
-                "Answer the user's goal concisely. Use code only if it materially improves the answer. "
+                "Answer the user's goal concisely. Use code only if it materially improves the answer, "
+                "and only after you have generated the exact Python you will run. "
                 "If you run code, keep it small/self-contained and in your final answer briefly explain: "
                 "the intent, the code (high level), and the results (stdout/stderr). Do not fabricate.",
             ),
