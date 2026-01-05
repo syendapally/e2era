@@ -61,7 +61,7 @@ def run_agent_pipeline(project_id: int, goal: str) -> Dict[str, Any]:
                 "TOOLS AVAILABLE:\n{tools}\n"
                 "When invoking a tool, use its exact name from: {tool_names}.",
             ),
-            ("user", "Goal:\n{goal}"),
+            ("user", "Goal:\n{input}"),
             MessagesPlaceholder("agent_scratchpad"),
         ]
     ).partial(
