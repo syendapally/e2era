@@ -12,10 +12,10 @@ from llm.vector_store import retrieve_project_chunks
 
 def run_agent_pipeline(project_id: int, goal: str) -> Dict[str, Any]:
     """
-    ReAct-style agent with two tools:
+    ReAct-style agent with tools:
     - retrieve: fetch relevant chunks from pgvector via LangChain retriever
     - run_code: execute Python (simple sandbox) and return stdout/stderr
-    Returns: dict with plan (parsed JSON or fallback), code (if executed), exec (stdout/stderr if executed)
+    Final output: a natural language answer. If code was run, include code and exec output.
     """
     runs: List[Dict[str, Any]] = []
 
@@ -45,9 +45,10 @@ def run_agent_pipeline(project_id: int, goal: str) -> Dict[str, Any]:
         [
             (
                 "system",
-                "You are a research agent. Always first retrieve relevant context. "
-                "Then produce a concise plan in JSON with fields: plan (array of steps), summary (string). "
-                "If needed, you may run code. Keep steps short. Do not fabricate results.",
+                "You are a research agent. Always retrieve context first. "
+                "Answer the user's goal concisely. Use code only if it materially improves the answer. "
+                "If you run code, keep it small/self-contained and in your final answer briefly explain: "
+                "the intent, the code (high level), and the results (stdout/stderr). Do not fabricate.",
             ),
             ("user", "Goal:\n{goal}"),
             MessagesPlaceholder("agent_scratchpad"),
@@ -61,11 +62,10 @@ def run_agent_pipeline(project_id: int, goal: str) -> Dict[str, Any]:
     result = executor.invoke({"input": goal})
     output_text = result.get("output", "")
 
-    plan = _try_parse_json(output_text) or {"plan": output_text, "summary": output_text}
     last_run = runs[-1] if runs else None
 
     return {
-        "plan": plan,
+        "answer": output_text,
         "code": last_run["code"] if last_run else None,
         "exec": {"stdout": last_run["stdout"], "stderr": last_run["stderr"]} if last_run else None,
     }

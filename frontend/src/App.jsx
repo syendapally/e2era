@@ -22,7 +22,7 @@ function App() {
   const [showCreate, setShowCreate] = useState(false)
   const [selectedProject, setSelectedProject] = useState(null)
   const [projectView, setProjectView] = useState('list') // 'list' | 'detail'
-  const [agentData, setAgentData] = useState({ plan: null })
+  const [agentData, setAgentData] = useState({ answer: null, code: null, exec: null })
   const [agentLoading, setAgentLoading] = useState(false)
   const [agentError, setAgentError] = useState('')
   const [noteText, setNoteText] = useState('')
@@ -139,7 +139,7 @@ function App() {
         setNewProjectTitle('')
         setShowCreate(false)
         setProjectView('detail')
-        setAgentData({ plan: null, code: null, report: null })
+        setAgentData({ plan: null, code: null, exec: null })
       })
       .catch((err) => setProjectError(err.message))
   }
@@ -231,7 +231,9 @@ function App() {
       const data = await res.json()
       if (!res.ok || data.error) throw new Error(data.error || 'Failed to load agent data')
       setAgentData({
-        plan: data.plan || null,
+        answer: data.answer || null,
+        code: data.code || null,
+        exec: data.exec || null,
       })
     } catch (err) {
       setAgentError(err.message)
@@ -406,7 +408,7 @@ function App() {
                 </form>
               ) : null}
 
-              <div className="project-grid">
+          <div className="project-grid">
                 {projects.map((p) => (
                   <button
                     key={p.id}
@@ -451,7 +453,7 @@ function App() {
                 onClick={() => {
                   setSelectedProject(null)
                   setProjectView('list')
-                  setAgentData({ plan: null })
+                      setAgentData({ answer: null, code: null, exec: null })
                 }}
               >
                 Back to projects
@@ -472,7 +474,9 @@ function App() {
                     const data = await res.json()
                     if (!res.ok || data.error) throw new Error(data.error || 'Agent failed')
                     setAgentData({
-                      plan: data.plan || null,
+                      answer: data.answer || null,
+                      code: data.code || null,
+                      exec: data.exec || null,
                     })
                   } catch (err) {
                     setAgentError(err.message)
@@ -548,18 +552,39 @@ function App() {
               <h4>Agent output</h4>
               {agentError ? <div className="error">{agentError}</div> : null}
               <div className="card-box">
-                <p className="muted">Plan</p>
-                {agentData.plan ? (
-                  <ul className="note-list">
-                    {(agentData.plan.plan || []).map((step, idx) => (
-                      <li key={idx}>{step}</li>
-                    ))}
-                    {agentData.plan.summary ? (
-                      <li className="muted">Summary: {agentData.plan.summary}</li>
-                    ) : null}
-                  </ul>
+                <p className="muted">Answer</p>
+                {agentData.answer ? (
+                  <p>{agentData.answer}</p>
                 ) : (
-                  <p className="muted">No plan yet.</p>
+                  <p className="muted">No answer yet.</p>
+                )}
+              </div>
+              <div className="card-box">
+                <p className="muted">Code (if generated)</p>
+                {agentData.code ? (
+                  <>
+                    <pre className="code-block">
+                      {agentData.code.content || agentData.code}
+                    </pre>
+                    {agentData.code.status ? (
+                      <p className="muted">Status: {agentData.code.status}</p>
+                    ) : null}
+                  </>
+                ) : (
+                  <p className="muted">No code yet.</p>
+                )}
+              </div>
+              <div className="card-box">
+                <p className="muted">Execution (if run)</p>
+                {agentData.exec ? (
+                  <>
+                    <p className="muted">stdout</p>
+                    <pre className="code-block">{agentData.exec.stdout || '(empty)'}</pre>
+                    <p className="muted">stderr</p>
+                    <pre className="code-block">{agentData.exec.stderr || '(empty)'}</pre>
+                  </>
+                ) : (
+                  <p className="muted">No execution yet.</p>
                 )}
               </div>
             </div>

@@ -204,11 +204,21 @@ def project_note(request, project_id: int):
 
 
 def latest_agent_payload(project: Project):
-    plan = project.plans.order_by("-created_at").first()
+    answer = project.reports.filter(section="answer").order_by("-created_at").first()
+    code = project.code_cells.order_by("-created_at").first()
     return {
-        "plan": plan.content if plan else None,
-        "code": None,
-        "report": None,
+        "answer": answer.content if answer else None,
+        "code": {
+            "id": code.id,
+            "content": code.content,
+            "status": code.status,
+            "stdout": code.stdout,
+            "stderr": code.stderr,
+        } if code else None,
+        "exec": {
+            "stdout": code.stdout,
+            "stderr": code.stderr,
+        } if code else None,
     }
 
 
@@ -235,16 +245,16 @@ def run_agent(request, project_id: int):
         or "Research the topic based on uploaded documents."
     )
 
-    # ReAct agent (retrieve + run_code tools), plan-first
+    # ReAct agent (retrieve + run_code tools); final answer from LLM
     result = run_agent_pipeline(project.id, goal)
-    plan_json = result.get("plan")
+    answer = result.get("answer")
     code = result.get("code")
     exec_out = result.get("exec")
 
-    if plan_json:
-        Plan.objects.create(project=project, content=plan_json)
+    if answer:
+        Report.objects.create(project=project, section="answer", content=answer)
     if code:
-        exp = ExperimentCode.objects.create(
+        ExperimentCode.objects.create(
             project=project,
             content=code,
             status="done" if (exec_out and not exec_out.get("stderr")) else "error" if exec_out else "generated",
@@ -253,7 +263,7 @@ def run_agent(request, project_id: int):
         )
     return JsonResponse(
         {
-            "plan": plan_json,
+            "answer": answer,
             "code": code,
             "exec": exec_out,
         }
