@@ -3,6 +3,9 @@ from pgvector.django import VectorField
 
 
 def create_vector_extension(apps, schema_editor):
+    # Skip on non-Postgres backends (e.g., local sqlite dev)
+    if schema_editor.connection.vendor != "postgresql":
+        return
     schema_editor.execute("CREATE EXTENSION IF NOT EXISTS vector;")
 
 
