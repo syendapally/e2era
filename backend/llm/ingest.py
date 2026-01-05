@@ -1,7 +1,7 @@
 from typing import List
 
 from django.core.files.storage import default_storage
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from PyPDF2 import PdfReader
 
 from core.models import Document
