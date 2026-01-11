@@ -5,8 +5,16 @@ services:
     build: ./backend
     env_file:
       - .env
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: e2era
+      DB_USER: e2era
+      DB_PASSWORD: e2era
     expose:
       - "8000"
+    depends_on:
+      - postgres
     restart: unless-stopped
 
   frontend:
@@ -27,5 +35,20 @@ services:
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     restart: unless-stopped
+
+  postgres:
+    image: ankane/pgvector:latest
+    environment:
+      POSTGRES_DB: e2era
+      POSTGRES_USER: e2era
+      POSTGRES_PASSWORD: e2era
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  pgdata:
 
 

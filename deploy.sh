@@ -14,13 +14,20 @@ set -euo pipefail
 # - Update AWS_SECRET_ID / AWS_REGION below if needed.
 # - This script rebuilds images; remove --build/--no-cache if you only want to pull.
 
+# Fetch secrets for non-DB settings (e.g., Django secret, Bedrock, etc.)
 AWS_SECRET_ID=${AWS_SECRET_ID:-e2era-app-dev-secrets}
 AWS_REGION=${AWS_REGION:-us-east-1}
-
-echo "Using secret: $AWS_SECRET_ID (region: $AWS_REGION)"
-
+echo "Fetching secret: $AWS_SECRET_ID (region: $AWS_REGION)"
 chmod +x scripts/fetch_secrets.sh
 AWS_SECRET_ID="$AWS_SECRET_ID" AWS_REGION="$AWS_REGION" ./scripts/fetch_secrets.sh
+
+# Override DB to use local pg service from docker-compose
+export DB_HOST=postgres
+export DB_PORT=5432
+export DB_NAME=e2era
+export DB_USER=e2era
+export DB_PASSWORD=e2era
+echo "Using local Postgres (docker-compose) DB settings."
 
 echo "Stopping existing stack..."
 docker compose down || true
