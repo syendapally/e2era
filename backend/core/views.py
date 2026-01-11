@@ -9,6 +9,10 @@ from django.utils import timezone
 import json
 import os
 import uuid
+import logging
+import traceback
+
+logger = logging.getLogger(__name__)
 
 from core.models import (
     Document,
@@ -249,6 +253,8 @@ def run_agent(request, project_id: int):
     try:
         result = run_agent_pipeline(project.id, goal) or {}
     except Exception as exc:  # pragma: no cover - defensive surface for frontend UX
+        # Log full traceback to help debug runtime errors
+        logger.exception("run_agent failed")
         return JsonResponse({"error": f"agent failed: {exc}"}, status=500)
 
     answer = result.get("answer")
