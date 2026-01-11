@@ -11,6 +11,7 @@ services:
       DB_NAME: e2era
       DB_USER: e2era
       DB_PASSWORD: e2era
+      DB_SSL_MODE: disable
     expose:
       - "8000"
     depends_on:
