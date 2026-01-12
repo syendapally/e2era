@@ -597,13 +597,13 @@ function App() {
   return (
     <div className="page">
       <header className="hero">
-        <div>
+      <div>
           <p className="eyebrow">End-to-End Research Agent</p>
           <h1>E2ERA</h1>
           <p className="subtitle">
             Plan, run, and compile research with code, experiments, and papers—backed by your uploaded sources.
-          </p>
-        </div>
+        </p>
+      </div>
         <div className="hero-right">
           {user ? (
             <div className="user-chip">
