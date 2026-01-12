@@ -67,6 +67,7 @@ def run_agent_pipeline(project_id: int, goal: str) -> Dict[str, Any]:
     ).partial(
         tools=render_text_description(tools),
         tool_names=", ".join([t.name for t in tools]),
+        agent_scratchpad=[],
     )
 
     llm = get_llm()
@@ -77,7 +78,7 @@ def run_agent_pipeline(project_id: int, goal: str) -> Dict[str, Any]:
         verbose=False,
     )
 
-    result = executor.invoke({"input": goal, "agent_scratchpad": []})
+    result = executor.invoke({"input": goal})
     
     output_text = result.get("output", "")
 
