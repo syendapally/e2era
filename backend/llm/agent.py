@@ -3,7 +3,7 @@ from typing import Dict, Any, List
 
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain.agents import Tool
-from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain.prompts import ChatPromptTemplate
 from langchain.tools.render import render_text_description
 
 from llm.bedrock import get_llm
@@ -58,11 +58,14 @@ def run_agent_pipeline(project_id: int, goal: str) -> Dict[str, Any]:
                 "TOOLS AVAILABLE:\n{tools}\n"
                 "When invoking a tool, use its exact name from: {tool_names}.",
             ),
-            ("user", f"Goal:\n{input}\n{agent_scratchpad}")
+            ("user", "Goal:\n{input}"),
+            # Keep prior reasoning steps in a single assistant message slot.
+            ("assistant", "{agent_scratchpad}"),
         ]
     ).partial(
         tools=render_text_description(tools),
         tool_names=", ".join([t.name for t in tools]),
+        agent_scratchpad="",
     )
 
     llm = get_llm()
