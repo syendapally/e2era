@@ -74,6 +74,7 @@ def run_agent_pipeline(project_id: int, goal: str) -> Dict[str, Any]:
         agent=agent,
         tools=tools,
         verbose=False,
+        handle_parsing_errors=True,
     )
 
     result = executor.invoke({"input": goal})
