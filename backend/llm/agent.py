@@ -60,7 +60,7 @@ def run_agent_pipeline(project_id: int, goal: str) -> Dict[str, Any]:
             ),
             ("user", "Goal:\n{input}"),
             # LangChain fills this with the running scratchpad as a list of messages.
-            MessagesPlaceholder("agent_scratchpad", optional=True),
+            MessagesPlaceholder(["agent_scratchpad"], optional=True),
         ]
     ).partial(
         tools=render_text_description(tools),
