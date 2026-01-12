@@ -58,9 +58,7 @@ def run_agent_pipeline(project_id: int, goal: str) -> Dict[str, Any]:
                 "TOOLS AVAILABLE:\n{tools}\n"
                 "When invoking a tool, use its exact name from: {tool_names}.",
             ),
-            ("user", "Goal:\n{input}"),
-            # LangChain fills this with the running scratchpad as a list of messages.
-            MessagesPlaceholder(["agent_scratchpad"], optional=True),
+            ("user", f"Goal:\n{input}\n{agent_scratchpad}")
         ]
     ).partial(
         tools=render_text_description(tools),
