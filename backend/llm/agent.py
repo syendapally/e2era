@@ -3,7 +3,7 @@ from typing import Dict, Any, List
 
 from langchain.agents import AgentExecutor, create_react_agent
 from langchain.agents import Tool
-from langchain.prompts import ChatPromptTemplate
+from langchain.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.tools.render import render_text_description
 
 from llm.bedrock import get_llm
@@ -54,21 +54,17 @@ def run_agent_pipeline(project_id: int, goal: str) -> Dict[str, Any]:
                 "Answer the user's goal concisely. Use code only if it materially improves the answer, "
                 "and only after you have generated the exact Python you will run. "
                 "If you run code, keep it small/self-contained and in your final answer briefly explain: "
-                "the intent, the code (high level), and the results (stdout/stderr). Do not fabricate.",
-            ),
-            (
-                "system",
+                "the intent, the code (high level), and the results (stdout/stderr). Do not fabricate. "
                 "TOOLS AVAILABLE:\n{tools}\n"
                 "When invoking a tool, use its exact name from: {tool_names}.",
             ),
             ("user", "Goal:\n{input}"),
-            # The agent hands back a string scratchpad; keep it in a single assistant message.
-            ("assistant", "{agent_scratchpad}"),
+            # LangChain fills this with the running scratchpad as a list of messages.
+            MessagesPlaceholder("agent_scratchpad", optional=True),
         ]
     ).partial(
         tools=render_text_description(tools),
         tool_names=", ".join([t.name for t in tools]),
-        agent_scratchpad="",
     )
 
     llm = get_llm()
