@@ -25,6 +25,7 @@ from core.models import (
 )
 from llm.ingest import embed_document
 from llm.agent import run_agent_pipeline
+from ml_models.fraud_model import get_fraud_model, model_feature_info
 
 
 def health(request):
@@ -293,4 +294,65 @@ def agent_data(request, project_id: int):
 
     return JsonResponse(latest_agent_payload(project))
 
+
+# -------- Fraud model (XGBoost) --------
+
+
+@csrf_exempt
+def fraud_model_details(request):
+    if request.method != "GET":
+        return JsonResponse({"error": "method not allowed"}, status=405)
+    try:
+        model = get_fraud_model()
+    except Exception as exc:
+        logger.exception("Failed to load fraud model")
+        return JsonResponse({"error": f"model unavailable: {exc}"}, status=500)
+
+    return JsonResponse(
+        {
+            "features": model_feature_info(),
+            "model_columns": model.feature_columns,
+            "training_metrics": model.training_metrics,
+            "artifact": "ml_models/artifacts/fraud_xgb.joblib",
+        }
+    )
+
+
+@csrf_exempt
+@require_POST
+def fraud_predict(request):
+    try:
+        payload = json.loads(request.body.decode("utf-8"))
+    except json.JSONDecodeError:
+        return HttpResponseBadRequest("Invalid JSON payload.")
+
+    claims = payload.get("claims") if isinstance(payload, dict) else None
+    if claims is None and isinstance(payload, dict):
+        # Allow a single claim object without wrapping it in an array
+        claims = [payload]
+
+    if not claims or not isinstance(claims, list):
+        return HttpResponseBadRequest("Provide a 'claims' array or a single claim object.")
+
+    try:
+        model = get_fraud_model()
+        probs = model.predict_proba(claims)
+        predictions = [
+            {
+                "fraud_probability": p,
+                "label": "fraud" if p >= 0.5 else "legit",
+            }
+            for p in probs
+        ]
+    except Exception as exc:
+        logger.exception("Fraud prediction failed")
+        return JsonResponse({"error": f"prediction failed: {exc}"}, status=500)
+
+    return JsonResponse(
+        {
+            "predictions": predictions,
+            "threshold": 0.5,
+            "feature_hint": [f["name"] for f in model_feature_info()],
+        }
+    )
 

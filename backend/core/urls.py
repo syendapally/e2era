@@ -15,6 +15,8 @@ urlpatterns = [
     path("projects/<int:project_id>/notes/", views.project_note, name="project-note"),
     path("projects/<int:project_id>/agent/run/", views.run_agent, name="project-agent-run"),
     path("projects/<int:project_id>/agent/data/", views.agent_data, name="project-agent-data"),
+    path("fraud/model/", views.fraud_model_details, name="fraud-model-details"),
+    path("fraud/predict/", views.fraud_predict, name="fraud-predict"),
 ]
 
 

@@ -3,9 +3,48 @@ import './App.css'
 
 const tabs = [
   { id: 'projects', label: 'Projects', body: '' },
+  { id: 'fraud', label: 'Fraud detection', body: 'Score inpatient facility claims with our XGBoost model.' },
   { id: 'account', label: 'Account', body: 'Sign in or create an account.' },
   { id: 'overview', label: 'Overview', body: 'E2ERA is an end-to-end research agent: plan, experiment, code, and draft papers with your uploaded context.' },
 ]
+
+const defaultClaim = {
+  claim_amount: '',
+  paid_amount: '',
+  drg_code: '',
+  primary_diagnosis: '',
+  primary_procedure: '',
+  admission_type: '',
+  admission_source: '',
+  discharge_disposition: '',
+  length_of_stay: '',
+  patient_age: '',
+  gender: '',
+  num_diagnoses: '',
+  num_procedures: '',
+  provider_state: '',
+  payer: '',
+}
+
+const claimFields = [
+  { name: 'claim_amount', label: 'Claim amount ($)', type: 'number' },
+  { name: 'paid_amount', label: 'Paid amount ($)', type: 'number' },
+  { name: 'drg_code', label: 'DRG code', type: 'text' },
+  { name: 'primary_diagnosis', label: 'Primary diagnosis', type: 'text' },
+  { name: 'primary_procedure', label: 'Primary procedure', type: 'text' },
+  { name: 'admission_type', label: 'Admission type', type: 'text' },
+  { name: 'admission_source', label: 'Admission source', type: 'text' },
+  { name: 'discharge_disposition', label: 'Discharge disposition', type: 'text' },
+  { name: 'length_of_stay', label: 'Length of stay (days)', type: 'number' },
+  { name: 'patient_age', label: 'Patient age', type: 'number' },
+  { name: 'gender', label: 'Gender', type: 'text' },
+  { name: 'num_diagnoses', label: '# of diagnoses codes', type: 'number' },
+  { name: 'num_procedures', label: '# of procedure codes', type: 'number' },
+  { name: 'provider_state', label: 'Provider state', type: 'text' },
+  { name: 'payer', label: 'Payer', type: 'text' },
+]
+
+const numericClaimFields = claimFields.filter((f) => f.type === 'number').map((f) => f.name)
 
 function App() {
   const [activeTab, setActiveTab] = useState('projects')
@@ -28,6 +67,11 @@ function App() {
   const [noteText, setNoteText] = useState('')
   const [uploading, setUploading] = useState(false)
   const [savingNote, setSavingNote] = useState(false)
+  const [claimInput, setClaimInput] = useState(defaultClaim)
+  const [fraudResult, setFraudResult] = useState(null)
+  const [fraudError, setFraudError] = useState('')
+  const [fraudLoading, setFraudLoading] = useState(false)
+  const [fraudFeatures, setFraudFeatures] = useState([])
   const currentTab = useMemo(
     () => tabs.find((tab) => tab.id === activeTab) ?? tabs[0],
     [activeTab],
@@ -56,6 +100,17 @@ function App() {
       })
       .catch(() => {
         setUser(null)
+      })
+  }, [])
+
+  useEffect(() => {
+    fetch('/api/fraud/model/')
+      .then((res) => res.json())
+      .then((data) => {
+        setFraudFeatures(data?.features || [])
+      })
+      .catch(() => {
+        setFraudFeatures([])
       })
   }, [])
 
@@ -267,6 +322,57 @@ function App() {
       })
       .catch((err) => setAuthError(err.message))
       .finally(() => setAuthLoading(false))
+  }
+
+  const handleClaimChange = (e) => {
+    const { name, value } = e.target
+    setClaimInput((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const resetFraudForm = () => {
+    setClaimInput(defaultClaim)
+    setFraudResult(null)
+    setFraudError('')
+  }
+
+  const submitFraud = async (e) => {
+    e.preventDefault()
+    setFraudError('')
+    setFraudLoading(true)
+    setFraudResult(null)
+    const normalizedClaim = Object.fromEntries(
+      Object.entries(claimInput).map(([key, value]) => {
+        if (value === '') return [key, null]
+        if (numericClaimFields.includes(key)) {
+          const numericValue = Number(value)
+          return [key, Number.isNaN(numericValue) ? null : numericValue]
+        }
+        return [key, value]
+      }),
+    )
+    try {
+      const res = await fetch('/api/fraud/predict/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ claims: [normalizedClaim] }),
+      })
+      const text = await res.text()
+      let data = {}
+      try {
+        data = JSON.parse(text)
+      } catch {
+        throw new Error('Prediction failed (unexpected response)')
+      }
+      if (!res.ok || data.error) {
+        throw new Error(data.error || 'Prediction failed')
+      }
+      const firstPrediction = data.predictions?.[0]
+      setFraudResult(firstPrediction ? { ...firstPrediction, threshold: data.threshold } : null)
+    } catch (err) {
+      setFraudError(err.message)
+    } finally {
+      setFraudLoading(false)
+    }
   }
 
   const renderAccount = () => (
@@ -594,6 +700,83 @@ function App() {
     </div>
   )
 
+  const renderFraud = () => (
+    <div className="panel">
+      <h2>Fraud detection</h2>
+      <p className="muted">
+        Enter inpatient claim details. We will compute the fraud probability with the XGBoost model
+        trained on the Kaggle enhanced health insurance claims dataset.
+      </p>
+      <div className="project-columns">
+        <div className="column">
+          <form className="card-box" onSubmit={submitFraud}>
+            <div className="field-grid">
+              {claimFields.map((field) => (
+                <div className="field" key={field.name}>
+                  <label htmlFor={field.name}>{field.label}</label>
+                  <input
+                    id={field.name}
+                    name={field.name}
+                    type={field.type}
+                    value={claimInput[field.name]}
+                    onChange={handleClaimChange}
+                    placeholder={field.type === 'number' ? '0' : ''}
+                  />
+                </div>
+              ))}
+            </div>
+            {fraudError ? <div className="error">{fraudError}</div> : null}
+            <div className="actions-row">
+              <button type="submit" className="btn primary" disabled={fraudLoading}>
+                {fraudLoading ? 'Scoring...' : 'Score claim'}
+              </button>
+              <button type="button" className="btn tertiary" onClick={resetFraudForm}>
+                Reset
+              </button>
+            </div>
+          </form>
+        </div>
+        <div className="column">
+          <div className="card-box">
+            <h4>Model output</h4>
+            {fraudResult ? (
+              <>
+                <p className="muted">Fraud probability</p>
+                <div className="prediction-value">
+                  {(fraudResult.fraud_probability * 100).toFixed(1)}%
+                </div>
+                <p className="muted">
+                  Decision: <strong>{fraudResult.label.toUpperCase()}</strong>{' '}
+                  {fraudResult.threshold !== undefined
+                    ? `(threshold ${Math.round(fraudResult.threshold * 100)}%)`
+                    : null}
+                </p>
+              </>
+            ) : (
+              <p className="muted">No prediction yet.</p>
+            )}
+          </div>
+          <div className="card-box">
+            <h4>Signals we use</h4>
+            <ul className="note-list">
+              {fraudFeatures.length
+                ? fraudFeatures.map((feature) => (
+                    <li key={feature.name}>
+                      <div className="note-text">
+                        <strong>{feature.name}</strong> — {feature.reason}
+                      </div>
+                    </li>
+                  ))
+                : (
+                  <p className="muted">Feature list unavailable.</p>
+                )}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
   return (
     <div className="page">
       <header className="hero">
@@ -633,6 +816,7 @@ function App() {
       </nav>
 
       {activeTab === 'projects' ? renderProjects() : null}
+      {activeTab === 'fraud' ? renderFraud() : null}
       {activeTab === 'account' ? renderAccount() : null}
       {activeTab === 'overview' ? (
         <section className="panel">
